@@ -9,9 +9,34 @@ output: html_document
 
 This is a starter RMarkdown template to accompany *Data Visualization* (Princeton University Press, 2019). You can use it to take notes, write your code, and produce a good-looking, reproducible document that records the work you have done. At the very top of the file is a section of *metadata*, or information about what the file is and what it does. The metadata is delimited by three dashes at the start and another three at the end. You should change the title, author, and date to the values that suit you. Keep the `output` line as it is for now, however. Each line in the metadata has a structure. First the *key* ("title", "author", etc), then a colon, and then the *value* associated with the key.  
 
-## This is an RMarkdown File
+## This is an RMarkdown File 
 
 Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+**R Shortcuts:**
+
+- *Alt + -* for assignment operator <-  
+  
+  
+  
+**R Mardown tips 'n Tricks:**
+
+- Denote a header with #
+- Denote subheader with ##
+- Denote italics with *this*
+- Denote **bold** with this
+- Denote `verbatim` like this
+- 1. for a list
+- Footnotes like this.[^1]
+- `[^1]: the actual footnote like this`
+
+
+- *Ctrl + Alt + I* to insert code chunks
+- *Alt + Enter* to run current line of code
+- *Alt + Shift + K* for help window
+
+(more here: http://rmarkdown.rstudio.com,  
+and here: https://ismayc.github.io/thesisdown_book/1-rmd-basics.html)
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. A *code chunk* is a specially delimited section of the file. You can add one by moving the cursor to a blank line choosing Code > Insert Chunk from the RStudio menu. When you do, an empty chunk will appear:
 
@@ -72,88 +97,349 @@ When you click the **Knit** button a document will be generated that includes bo
 ```{r look}
 gapminder
 ```
-
+  
 The remainder of this document contains the chapter headings for the book, and an empty code chunk in each section to get you started. Try knitting this document now by clicking the "Knit" button in the RStudio toolbar, or choosing File > Knit Document from the RStudio menu.
 
-## Look at Data
-
+## Chapter 1:  Look at Data
 ```{r}
 
 ```
-
-
-## Get Started
-
+  
+## Chapter 2: Get Started
+  
+Load the *tidyverse* library:  
 ```{r}
 library(tidyverse)
-
+```
+  
+Load the *socviz* library:
+```{r}
 library(socviz)
-
-#everything is an object
+```
+  
+### Chapter 2.3: ****************
+Almost verything is an **object**.
+  
+The **command** `c()` is a **function** - "c" is short for concatenate:
+```{r}
 c(1,2,3,1,3,5,25)
-
-#assign these results to an object:
+```
+  
+Assign these results to an **object**:
+```{r}
 my_numbers<-c(1,2,3,1,3,5,25)
 
 your_numbers<-c(5,31,71,1,3,21,6)
-
-#The object my_numbers is a numeric vector:
+```
+  
+The object `my_numbers` is a numeric **vector**:
+```{r}
 my_numbers
+```
+  
+`mean()` is a function which acts on a vector of numbers
 
-#mean() is a function which acts on a vector of numbers
-mean()
-
-#we forgot to give mean() an object to operate on:
+```{r}
 mean(x = my_numbers)
 
 mean(x = your_numbers)
-
+```
+  
+We don't need to specify the name "x" for the function to work:
+```{r}
 mean(my_numbers)
 
 
 summary(my_numbers)
-
+```
+  
+We can **assign** the result of a function to an object
+```{r}
 my_summary <- summary(my_numbers)
 
+my_summary
+```
+  
+Functions come in **packages**:
+```{r}
+table(my_numbers) #a table of counts
+
+sd(my_numbers) #standard deviation
+```
+  
+Vectorized operations:
+```{r}
+my_numbers * 5 #multiplies each number in the vector by 5
+
+my_numbers + 1 #adds one to each number in the vector
+ 
+my_numbers + my_numbers #adds the vectors
+```
+  
+Ask for the class of an object:
+```{r}
+class(my_numbers)
+
+class(my_summary)
+
+class(summary)
+```
+  
+We may change the class after certain operations:
+```{r}
+my_new_vector <- c(my_numbers, "apple")
+
+my_new_vector
+```
+  
+Adding the word apple to our list of numbers changed the class:  
+```{r}
+class(my_new_vector)
+```
+
+**Data frames** are the most common kind of data object.  Date frames are rectangular table with rows (observations) and columns (variables).  
+Columns in data frames can be different types:
+  
+```{r}
 titanic
+?titanic
+class(titanic)
+summary(titanic)
+```
+  
+Access a named column with a `$` operator:
+```{r}
+titanic$percent
+```
+  
+Access first two observations (rows), and all variables (columns):  
+```{r}
+titanic[1:2,]
+```
+  
+Access observations for females only:
+```{r}
+subset(titanic, sex == 'female')
+```
+  
+Access observations for females only, where percent < 10:
+```{r}
+subset(titanic, sex == 'female' & percent < 10)
+```
+
+Access observations for females only, where percent < 10, but keep only sex and fate variables:
+```{r}
+subset(titanic, sex == 'female' & percent < 10, select=c(fate, sex))
+```
+
+See Appendix 1 for more info on selecting elements.  
+  
+A **tibble** is an enhanced kind of data frame.  
+  
+Convert a data frame to a tibble:
+```{r}
+titanic_tb <- as_tibble(titanic)
+
+titanic_tb
+```
+
+The `str()` function lets us see what is inside an object:
+```{r}
+str(titanic_tb)
+```
+  
+  
+  
+### Chapter 2.4***************
+In ggplot, we'll build plots one element at a tim by adding expressions.  
+
+Be careful to place "+" at the end of the lines and not the beginning:
+```{r}
+ggplot(data = mpg, aes(x = displ, y = hwy)) + 
+     geom_point() 
+```
+
+### Chapter 2.5 Get Data into R***************
+Use `read_csv()` from the readr package (it's in the tidyverse).  
+  
+We can read in a local file or a remote file.  For example:
+
+```{r}
+url <- "https://cdn.rawgit.com/kjhealy/viz-organdata/master/organdonation.csv"
+
+organs <- read_csv(url)
+```
+  
+When preparing data for use in R, it's best if in **Tidy** format.
+
+https://r4ds.had.co.nz/tidy-data.html
+
+- each variable is a column
+- each observation is a row
+- each type of observational unit forms a table  
+
+Untidy census table:  
+```{r}
+edu
+```
+
+Use `gather()` to transform the schooling variables into a **key-value arrangement**.  
+Key is the underlying variable, value is the value of the observation:
+```{r}
+edu_tidy <- gather(data = edu,
+                   key = school,
+                   value = freq, 
+                   elem4 : coll4)
+
+head(edu_tidy, 10)
+tail(edu_tidy, 10)
+```
+  
+### Chapter 2.6 First Plot***************
+```{r}
+library(gapminder)
+
+gapminder
+
+p <- ggplot(data = gapminder,
+            mapping = aes(x = gdpPercap, y = lifeExp))
+
+p + geom_point()
 
 ```
 
 
-## Make a Plot
+## Chapter 3: Make a Plot  
+  
+### 3.2 Tidy Data  
+Tidyverse tools like to see **long-format** data.  
+  
+### 3.3 Mappings Link Data to Things We See
+  
+We can use a recipe for creating each plot in R:  
+  
+1. Start with **tidy** data - usually a data frame or a tibble  
+2. tell the core *ggplot* function what our data is, and what the *mappings* are (and assign to "p")  
+3. Choose a plot type, or *geom* and add it to "p"  
+4. Add more features, such as adjusted elements, adjusted scales, title and labels, etc...  
+    
+Remind ourselves what `gapminder` data looks like:
+```{r}
+str(gapminder)
+head(gapminder, 10)
+tail(gapminder, 10)
+```
+  
+Now, let's follow the recipe:  
+2.  tell the core *ggplot* function what our *data* is (and assign it "p"), and what the *mappings* are:  
+```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp))
+```
+  
+The `mapping = aes()` argument links variables to to things we'll see on the plot.  
+These mappings can include items such as color, shape, size, and line characteristics.  
+
+3. Choose a plot type, or *geom* and add it to "p"   
+
+Here, we use the data in a scatterplot:
+```{r}
+p +
+     geom_point()
+```
+  
+### 3.4 Build Plots Layer by Layer
+
+Let's try a different *geom_* function:  
+```{r}
+p +
+     geom_smooth()
+```
+  
+Here, we can see the geom_ function has some special qualities by default.  
+It no longer maps the individual points; instead it's calculated a smooth line with a shaded area equal to the standard error.  By default, the smoothed line is determined via *gam* method - genreal additive model.  
+  
+If we want to add the points back in, we can add 'geom_point()' back in:  
+```{r}
+p +
+     geom_smooth() +
+     geom_point()
+```
+  
+We can also change from the default gam method to a linear model fit:  
+```{r}
+p +
+     geom_smooth(method = "lm") +
+     geom_point()
+```
+  
+We can see wo bunched GDP is on the left hand side of the x-axis.  By applying a log scale, we can improve the clarity:  
+```{r}
+p +
+     geom_smooth(method = "gam") +
+     geom_point() +
+     scale_x_log10()
+```
+  
+The log xform is applied prior to the scalling function.  
+  
+There are a number of scale xform we can apply; each has its own name, and reference the axis it applies to:
+```{r}
+p +
+     geom_smooth(method = "gam") +
+     geom_point() +
+     scale_y_log10()
+```
+    
+Next, we'd want to add axis labels, a title, and clean up the tick mark formatting.  
+
+Labels on tick marks are controlled through the *scale_* functions.  
+  
+The `scales` package contains some useful formats. Rather than load the package with `library(scales)', we can grab the function directly from the library using the syntax `thepackage::thefunction'.  
+  
+To do this for the x-axis:  
+```{r}
+p +
+     geom_smooth(method = "gam") +
+     geom_point() +
+     scale_x_log10(labels = scales::dollar)
+```
+  
+In general regarding scale transforms:  
+1. we can directly xform by adding *scale_y_* or *scale_x_* to the plot.  
+2. then, we can give the *scale_* functions a *labels* argument.  
+    
+    
+### 3.5 Mapping Aesthetics vs. Setting Them  
+
+
+
+## Chapter 4: Show the Right Numbers
 
 ```{r}
 
 ```
 
 
-## Show the Right Numbers
+## Chapter 5: Graph Tables, Make Labels, Add Notes
+
+```{r}
+
+```
+
+## Chapter 6: Work with Models
+
+```{r}
+
+```
+
+## Chapter 7: Draw Maps
 
 ```{r}
 
 ```
 
 
-## Graph Tables, Make Labels, Add Notes
-
-```{r}
-
-```
-
-## Work with Models
-
-```{r}
-
-```
-
-## Draw Maps
-
-```{r}
-
-```
-
-
-## Refine your Plots
+## Chapter 8: Refine your Plots
 
 ```{r}
 
