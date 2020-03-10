@@ -356,7 +356,7 @@ p +
 ```
   
 Here, we can see the geom_ function has some special qualities by default.  
-It no longer maps the individual points; instead it's calculated a smooth line with a shaded area equal to the standard error.  By default, the smoothed line is determined via *gam* method - genreal additive model.  
+It no longer maps the individual points; instead it's calculated a smooth line with a shaded area equal to the standard error.  By default, the smoothed line is determined via *gam* method - general additive model.  
   
 If we want to add the points back in, we can add 'geom_point()' back in:  
 ```{r}
@@ -372,7 +372,7 @@ p +
      geom_point()
 ```
   
-We can see wo bunched GDP is on the left hand side of the x-axis.  By applying a log scale, we can improve the clarity:  
+We can see wo bunched GDP is on the left hand side of the x-axis.  By applying a log scale to the x-axis, we can improve the clarity:  
 ```{r}
 p +
      geom_smooth(method = "gam") +
@@ -380,7 +380,7 @@ p +
      scale_x_log10()
 ```
   
-The log xform is applied prior to the scalling function.  
+The log xform is applied prior to the scaling function.  
   
 There are a number of scale xform we can apply; each has its own name, and reference the axis it applies to:
 ```{r}
@@ -406,18 +406,139 @@ p +
   
 In general regarding scale transforms:  
 1. we can directly xform by adding *scale_y_* or *scale_x_* to the plot.  
-2. then, we can give the *scale_* functions a *labels* argument.  
+2. then, we can give this *scale_* function a *labels* argument.  
     
-    
+      
 ### 3.5 Mapping Aesthetics vs. Setting Them  
+  
+An *aesthetic mapping* specifies which color, shape, size, etc... a varibale will be represented as.  We can map a variable like this:  
+  
+```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp, color = continent))
 
-
-
-## Chapter 4: Show the Right Numbers
+p + geom_point() +
+     geom_smooth(method = "loess") +
+     scale_x_log10(labels = scales::dollar)
+```
+  
+If we wanted to turn all points in the plot purple, we do not assign the color purple in the aesthetic; we set it in the geom_():  
 
 ```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp))
+
+p + geom_point(color = "purple") +
+     geom_smooth(method = "loess") +
+     scale_x_log10(labels = scales::dollar)
+```
+
+Now, we're no longer assigning continents to colors, we're simply coloring all points purple - so we also get only one regression line.  
+  
+`geom_()` functions can take other inputs which impact appearance without being mapped to aesthetic.  
+  
+```{r}
+p + geom_point(alpha = 0.3) +
+     geom_smooth(color = "orange", se=FALSE, size = 8, method = "lm") +
+     scale_x_log10(labels = scales::dollar)
+```
+  
+* adding `alpha = 0.3` to `geom_point` sets the tranparency of the dots to 0.3 on a scale of 0.0 (transparent) to 1.0 (opaque).  
+* adding `color = "orange"` to `geom_smooth()` changes the regression line color to orange.  
+* adding `size` = 8` sets the line width (it's too wide!).  
+* setting `se = FALSE` removes the standard error range from the regression.  
+  
+In addition to  `x`, `y`, and other `aes()` mappings, the `labs()` function sets the main labels, including the text for title, axis labels, subtitle, and caption.  Items such as axis tick marks are set by the various `scale_` functions.
+  
+```{r}
+p + geom_point(alpha = 0.3) +
+     geom_smooth(color = "orange", se=FALSE, size = 1, method = "lm") +
+     scale_x_log10(labels = scales::dollar) +
+  labs(x = "GDP Per Capita",
+       y = "Life Expectancy in Years",
+       title = "Economic Growth & Life Expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder")
+  
+```
+  
+Back to where we mapped continents to color and had multiple loess lines with se zones... We can also change the color of the se zones to match the color of the lines:  
+  
+```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp, color = continent, fill = continent))
+
+p + geom_point() +
+     geom_smooth(method = "loess") +
+     scale_x_log10(labels = scales::dollar) +
+    labs(x = "GDP Per Capita",
+       y = "Life Expectancy in Years",
+       title = "Economic Growth & Life Expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder")
 
 ```
+  
+    
+### 3.6 Aesthetics Can be Mapped per Geom 
+  
+We may instead want just one regression line, but maintain the color coding of points by continent. 
+  
+geoms inherit their mappings from `ggplot()` by default.  We can change this by specifying different aesthetics for each `geom`.  We still use `mapping = aes()`, but now in the `geom_` functions as well: 
+  
+  
+```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp))
+
+p + geom_point(mapping = aes(color = continent)) +
+     geom_smooth(method = "loess") +
+     scale_x_log10(labels = scales::dollar) +
+    labs(x = "GDP Per Capita",
+       y = "Life Expectancy in Years",
+       title = "Economic Growth & Life Expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder")
+
+```  
+  
+We can also plot a continuous scale, by mapping to the `color` aesthetic.  For example:  
+
+```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp))
+
+p + geom_point(mapping = aes(color = log(pop))) +
+     geom_smooth(method = "loess") +
+     scale_x_log10(labels = scales::dollar) +
+    labs(x = "GDP Per Capita",
+       y = "Life Expectancy in Years",
+       title = "Economic Growth & Life Expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder")
+```
+
+  
+### 3.7 Save Your Work 
+  
+Set the default size of plots within the .Rmd document by setting an option in the first chunk of code.  This tells R to make 8" x 5" figures:  
+```{r}
+knitr::opts_chunk$set(fig.width = 8, fig.height = 5)
+```
+  
+To change the size of a particular figure without changing the default setting, add the option to any code chunk within the braces:  
+  
+```{r example, fig.width = 4, fig.height=2.5}
+p + geom_point()
+```
+  
+
+
+```{r}
+here()
+```
+    
+      
+### 3.8 Where to Go Next  
+  
+
+
+  
 
 
 ## Chapter 5: Graph Tables, Make Labels, Add Notes
