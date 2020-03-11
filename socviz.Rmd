@@ -61,7 +61,7 @@ my_packages <- c("tidyverse", "broom", "coefplot", "cowplot",
                  "gapminder", "GGally", "ggrepel", "ggridges", "gridExtra",
                  "here", "interplot", "margins", "maps", "mapproj",
                  "mapdata", "MASS", "quantreg", "rlang", "scales",
-                 "survey", "srvyr", "viridis", "viridisLite", "devtools")
+                 "survey", "srvyr", "svglite", viridis", "viridisLite", "devtools")
 
 install.packages(my_packages, repos = "http://cran.rstudio.com")
 
@@ -86,6 +86,7 @@ library(gapminder)
 library(here)
 library(socviz)
 library(tidyverse)
+library(svglite)
 
 ```
 
@@ -527,18 +528,221 @@ To change the size of a particular figure without changing the default setting, 
 p + geom_point()
 ```
   
+When working with `ggplot`, the easiest way to save a figure is via `ggsave()`.  To save the most recent picture, we provide the name we want to save as:  
+  
+```{r}
+ggsave(filename = "myfilename.svg")  
+```
+  
+We can change the format of the file by simply changing the extension:  
+  
+```{r}
+ggsave(filename = "myfilename.png")
+```
+  
+No need to include `filename =` if the file name is the first argument you give `ggsave()`.  
+  
+We can also pass a **plot object** to `ggsave()`:  
+  
+```{r}
+p_out <- p + geom_point() +
+  geom_smooth(method = "loess") +
+  scale_x_log10()
 
+ggsave("my_figure2.pdf", plot = p_out)
+```
+  
+When saving our work, it's best to have separate folders inside the main project file for data and figures.  When saving figures, we can use the `here` library to avoid typing complete file paths.  Here's how it works:       
 
 ```{r}
 here()
 ```
+  
+Now we can save to our "figures" folder using `here`:  
+  
+```{r}
+ggsave(here("figures", "my_figure2.pdf"), plot = p_out)
+```
+  
+When saving files, keep in mind two broad categories: *vector* formats, and *raster* formats:
+
+* **vector** formats include PDF, SVG.  These are stored as a set of image instructions, which the viewing software interprets.  These formats are good for resizing, say for white papers.  
+* **raster** formats include JPG (compressed raster) and PNG (lossless compression).  These are usually for web display, and not easily re-sized.  
+  
+In general, it's wise to save images in multiple formats and different sizes.  Use the `scale` argument in `ggsave()` to help:  
+```{r}
+ggsave(here("figures", "my_figure3.pdf"), plot = p_out, scale = 5)
+```
+
     
-      
 ### 3.8 Where to Go Next  
   
-
-
+* What happens when we place `geom_smooth()` before `geom_point()`?  What does this tell us about how the plot is drawn?  How might this be useful?  
+```{r}
+p + 
+  geom_smooth(method = "loess") +
+  geom_point() +
+  scale_x_log10()
+```
   
+  + This places the regression line under the scatter plots.  
+  
+* Change the mappings in the aes() function to plot life expectancy against population rather than GDP.
+  + How does this look?  
+  + What does it tell us about the unit of observation?  
+  
+```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = pop, y = lifeExp))
+
+p + 
+  geom_smooth(method = "loess") +
+  geom_point() +
+  scale_x_log10()
+```
+
+  #We can see individual countries population and life expectancy increasing over time.
+
+* Try some alternative scale mappings such as `scale_x_sqrt()` and `scale_x_reverse()`.  Try the same for y-axis scale mappings:  
+  
+```{r}
+p + geom_point(mapping = aes(color = log(pop))) +
+     geom_smooth(method = "loess") +
+     scale_x_sqrt(labels = scales::dollar) +
+    labs(x = "GDP Per Capita",
+       y = "Life Expectancy in Years",
+       title = "Economic Growth & Life Expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder")
+```
+  
+*(Kuwait is the outlier)*  
+  
+  
+```{r}
+p + geom_point(mapping = aes(color = log(pop))) +
+     geom_smooth(method = "loess") +
+     scale_x_reverse(labels = scales::dollar) +
+    labs(x = "GDP Per Capita",
+       y = "Life Expectancy in Years",
+       title = "Economic Growth & Life Expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder")
+```
+  
+* What if we map `color` to `year` rather than to `continent`?  
+```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp))
+p + geom_point(mapping = aes(color = year)) +
+     geom_smooth(method = "loess") +
+     scale_x_log10(labels = scales::dollar) +
+    labs(x = "GDP Per Capita",
+       y = "Life Expectancy in Years",
+       title = "Economic Growth & Life Expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder")
+
+```
+  + Year is not a **factor**, it's an **integer**... But we can convert it to a factor! :  
+  
+```{r}
+p + geom_point(mapping = aes(color = factor(year))) +
+     geom_smooth(method = "loess") +
+     scale_x_log10(labels = scales::dollar) +
+    labs(x = "GDP Per Capita",
+       y = "Life Expectancy in Years",
+       title = "Economic Growth & Life Expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder")
+```
+  
+
+## Chapter 4: Show the Right Numbers  
+  
+* *grouping*  tells ggplot more about the internal structure of our data  
+* *faceting* breaks our data into groups for plotting  
+* *transforming* data can be done inside of the *geom* functions with the associtated *stat* functions.  
+  
+### 4.2:  Grouped Data and the "Group" Aesthetic  
+  
+We can use the `group` aesthetic to tell ggplot explicitly about country-level structure:  
+  
+```{r}
+p <- ggplot(gapminder, mapping = aes(x = year, y = gdpPercap))
+
+p + geom_line(aes(group = country))
+```
+  
+(Kuwait is the outlier)  
+  
+The plot is extremely busy, so we'll *facet* (group) the data by continent to make small multiples.  This allows a lot of data to be presented compactly in a comparable fashion.  
+
+In this case, we use `facet_wrap()` function to group data by continent.  The `facet_wrap()` function can take several arguments, the most important of which is the first (it uses the tilde character ~).  
+  
+```{r}
+p + 
+  geom_line(aes(group = country )) +
+  facet_wrap(~ continent)
+```
+  
+Each facet is labeled at the top.  We can use the `ncol` argument to control the number of columns.  Since we only have 5 continents, we can probably display on 1 row.  We can also lighten the individual country lines, add a wide trend line, make the y-axis log scaled, add $ labels:  
+  
+```{r}
+p + 
+  geom_line(color = "gray70", aes(group = country )) +
+  geom_smooth(size = 1.1, method = loess, se = FALSE) +
+  scale_y_log10(labels = scales::dollar) +
+  facet_wrap(~ continent, ncol = 5) +
+  labs(x = "Year",
+       y = "GDP per Capita",
+       title = "GDP per Capita on 5 Continents")
+```
+  
+`facet_wrap()` is best used when dealing with a single categorical variable.  When we want to group by 2 or more, `facet_grid()` is a better choice.
+
+The 2016 Global Social Survey, or `gss_sm` is a small subset of data from a wide social survey.  Here's some info:  
+  
+```{r}
+?gss_sm
+
+str(gss_sm)
+
+summary(gss_sm)
+
+glimpse(gss_sm)
+
+head(gss_sm, 10)
+
+tail(gss_sm, 10)
+```
+  
+We can make a smoothed scatterplot of the relationship between age and number of children:  
+  
+```{r}
+p <- ggplot(data=gss_sm, mapping = aes(x = age, y = childs))
+
+p + geom_point(alpha = 0.2) +
+  geom_smooth()
+```
+  
+    
+Now, we facet by sex and race:    
+```{r}
+p + geom_point(alpha = 0.2) +
+  geom_smooth() +
+  facet_grid(sex ~ race)
+```
+  
+We could add more than 2 categories to facet on:  
+
+```{r}
+p + geom_point(alpha = 0.2) +
+  geom_smooth() +
+  facet_grid(sex ~ race + degree)
+```
+
+
+
+
 
 
 ## Chapter 5: Graph Tables, Make Labels, Add Notes
