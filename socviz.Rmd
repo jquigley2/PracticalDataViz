@@ -1,8 +1,11 @@
 ---
 title: "Data Visualization Notes"
 author: "Jon Quigley"
-date: "2020-02-26"
-output: html_document
+date: '2020-02-26'
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
 ---
    
 ## Data Visualization Notes
@@ -18,8 +21,7 @@ Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word docu
 - *Alt + -* for assignment operator <-  
   
   
-  
-**R Mardown tips 'n Tricks:**
+**R Markdown tips 'n Tricks:**
 
 - Denote a header with #
 - Denote subheader with ##
@@ -61,7 +63,7 @@ my_packages <- c("tidyverse", "broom", "coefplot", "cowplot",
                  "gapminder", "GGally", "ggrepel", "ggridges", "gridExtra",
                  "here", "interplot", "margins", "maps", "mapproj",
                  "mapdata", "MASS", "quantreg", "rlang", "scales",
-                 "survey", "srvyr", "svglite", viridis", "viridisLite", "devtools")
+                 "survey", "srvyr", "svglite", "viridis", "viridisLite", "devtools")
 
 install.packages(my_packages, repos = "http://cran.rstudio.com")
 
@@ -97,6 +99,7 @@ When you click the **Knit** button a document will be generated that includes bo
 
 ```{r look}
 gapminder
+glimpse(gapminder)
 ```
   
 The remainder of this document contains the chapter headings for the book, and an empty code chunk in each section to get you started. Try knitting this document now by clicking the "Knit" button in the RStudio toolbar, or choosing File > Knit Document from the RStudio menu.
@@ -119,7 +122,7 @@ library(socviz)
 ```
   
 ### Chapter 2.3: ****************
-Almost verything is an **object**.
+Almost everything is an **object**.
   
 The **command** `c()` is a **function** - "c" is short for concatenate:
 ```{r}
@@ -244,15 +247,17 @@ titanic_tb <- as_tibble(titanic)
 titanic_tb
 ```
 
-The `str()` function lets us see what is inside an object:
+The `str()` function -*structure* - lets us see what is inside an object:
 ```{r}
 str(titanic_tb)
+
+str(my_numbers)
+
+str(my_summary)
 ```
   
-  
-  
 ### Chapter 2.4***************
-In ggplot, we'll build plots one element at a tim by adding expressions.  
+In ggplot, we'll build plots one element at a time by adding expressions.  
 
 Be careful to place "+" at the end of the lines and not the beginning:
 ```{r}
@@ -311,6 +316,8 @@ p + geom_point()
 
 
 ## Chapter 3: Make a Plot  
+In *ggplot*, you begin by telling the function what your data is, and how the variables map to the aesthetics. Then, take the result and indicate the general type of plot.  The rest is "just" details.   
+  
   
 ### 3.2 Tidy Data  
 Tidyverse tools like to see **long-format** data.  
@@ -332,7 +339,7 @@ tail(gapminder, 10)
 ```
   
 Now, let's follow the recipe:  
-2.  tell the core *ggplot* function what our *data* is (and assign it "p"), and what the *mappings* are:  
+2.  tell the core *ggplot* function what our *data* is (and assign it to "p"), and what the *mappings* are:  
 ```{r}
 p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp))
 ```
@@ -358,6 +365,8 @@ p +
   
 Here, we can see the geom_ function has some special qualities by default.  
 It no longer maps the individual points; instead it's calculated a smooth line with a shaded area equal to the standard error.  By default, the smoothed line is determined via *gam* method - general additive model.  
+
+[GAM (Generalized Additive Model)] https://en.wikipedia.org/wiki/Generalized_additive_model  
   
 If we want to add the points back in, we can add 'geom_point()' back in:  
 ```{r}
@@ -373,7 +382,8 @@ p +
      geom_point()
 ```
   
-We can see wo bunched GDP is on the left hand side of the x-axis.  By applying a log scale to the x-axis, we can improve the clarity:  
+  
+We can see how bunched GDP is on the left hand side of the x-axis.  By applying a log scale to the x-axis, we can improve the clarity:  
 ```{r}
 p +
      geom_smooth(method = "gam") +
@@ -412,7 +422,7 @@ In general regarding scale transforms:
       
 ### 3.5 Mapping Aesthetics vs. Setting Them  
   
-An *aesthetic mapping* specifies which color, shape, size, etc... a varibale will be represented as.  We can map a variable like this:  
+An *aesthetic mapping* specifies which color, shape, size, etc... a variable will be represented as.  We can map a variable like this:  
   
 ```{r}
 p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp, color = continent))
@@ -421,6 +431,8 @@ p + geom_point() +
      geom_smooth(method = "loess") +
      scale_x_log10(labels = scales::dollar)
 ```
+
+[LOESS (Locally Estimated Scatterplot Smoothing)] https://en.wikipedia.org/wiki/Local_regression 
   
 If we wanted to turn all points in the plot purple, we do not assign the color purple in the aesthetic; we set it in the geom_():  
 
@@ -660,7 +672,7 @@ p + geom_point(mapping = aes(color = factor(year))) +
   
 * *grouping*  tells ggplot more about the internal structure of our data  
 * *faceting* breaks our data into groups for plotting  
-* *transforming* data can be done inside of the *geom* functions with the associtated *stat* functions.  
+* *transforming* data can be done inside of the *geom* functions with the associated *stat* functions.  
   
 ### 4.2:  Grouped Data and the "Group" Aesthetic  
   
@@ -739,35 +751,462 @@ p + geom_point(alpha = 0.2) +
   geom_smooth() +
   facet_grid(sex ~ race + degree)
 ```
+This obviously becomes very difficult to read, however!
 
+### 4.4 Geoms Can Transform Data
+Some geoms simply plot the data on a figure, others do more work prior to plotting.  All `geom_()` functions have associated `stat_()` function that it uses by default, and *vice versa*.  However, at times we may want to apply a different statistic.
+
+For example, `geom_bar()` uses the `stat_count()` function by default.  `stat_count()` calculates two variables, `count` and `prop` (for proportion).  `geom_bar()` uses the `count` statistic by default:
+```{r}
+p <- ggplot(data = gss_sm, mapping = aes(x = bigregion))
+
+p + geom_bar()
+```
+  
+If we want the chart to instead return the proportion of total population in each region, we'll need to use the `prop` statistic instead.
+
+When ggplot calculates the count or proportion, it returns temporary variables for use in the plot.  These temp variables' names begin and end with two periods: `..prop..`.
+```{r}
+p <- ggplot(data = gss_sm, mapping = aes(x = bigregion))
+
+p + geom_bar(mapping = aes(y = ..prop..))
+```
+  
+This isn't quite right... We don't want the proportion of each region to itself, we want the proportion of each region to the whole.  So, not 4 groups, but one!:
+```{r}
+p <- ggplot(data = gss_sm, mapping = aes(x = bigregion))
+
+p + geom_bar(mapping = aes(y = ..prop.., group = 1))
+```
+
+Religion is another variable in the `gss_sm` survey:
+
+```{r}
+table(gss_sm$religion)
+```
+  
+To graph this, we want religions on the x-axis, and the bars colored by religion:  
+
+```{r}
+p <- ggplot(data = gss_sm, mapping = aes(x = religion, color = religion))
+
+p + geom_bar()
+```
+  
+This only places color outlines on the bars.  We want the **fill** to be color as well.  To accomplish this, we need to map the `religion` variable to `fill`.:  
+```{r}
+p <- ggplot(data = gss_sm, mapping = aes(x = religion, fill = religion))
+
+p + geom_bar()
+```
+  
+This bar chart shows a legend by default.  However, since the x-axis already shows the `religion` categories, the legend is redundant.  We can remove this by setting the `guides()` function to false:  
+```{r}
+p <- ggplot(data = gss_sm, mapping = aes(x = religion, fill = religion))
+
+p + geom_bar() + guides(fill = FALSE)
+```
+  
+### 4.5 Frequency Plots the Slightly Awkward Way
+  
+A better use of the `fill` aesthetic with `geom_bar()` is cross-classifying two variables, as in a count of proportions.
+
+For example, we want to look at religious preferences by region. With `geom_bar()`, the output is controlled by the `position` argument.
+
+```{r}
+p <- ggplot(data = gss_sm, mapping = aes(x = bigregion, fill = religion))
+
+p + geom_bar()
+```
+  
+The default output is a stacked bar chart, with counts on the y-axis.  This makes the relative position of any one religion difficult to compare across regions.  It's preferable to show the proportions within each region.  We can achieve this by setting the `position` argument to "`fill`".  
+```{r}
+p <- ggplot(data = gss_sm, mapping = aes(x = bigregion, fill = religion))
+
+p + geom_bar(position = "fill")
+```
+  
+This gives us the ability to compare proportions, but we lose sense of what proportion of each religion is found in each region.  To better see that, we could do regional groups with bars for each religion using `position = "dodge"`.  
+
+```{r}
+p <- ggplot(data = gss_sm, mapping = aes(x = bigregion, fill = religion))
+
+p + geom_bar(position = "dodge", mapping = aes(y = ..prop.., group = religion)) #dodge forces data to miss each other
+```
+  
+We can also facet by region, and show the proportion within each region:
+```{r}
+p <- ggplot(data = gss_sm, mapping = aes(x = bigregion, fill = religion))
+
+p + geom_bar(position = "dodge", mapping = aes(y = ..prop.., group = religion)) 
+```
+
+
+### 4.6 Histograms and Density Plots
+  
+A histogram summarizes a continuous variable by chopping into bins and counting the observations within each bin.
+
+We can make a histogram showing the distribution of the size of counties in the Midwest (from the `midwest' data set in ggplot):
+
+str(midwest)
+summary(midwest)
+glimpse(midwest)
+
+```{r}
+p <- ggplot(data = midwest, mapping = aes(x = area))
+p + geom_histogram() #function will select a number of bins based on rule of thumb.  We can override this.
+```
+  
+By default, 'geom_histogram()` will choose the number of bins.  We can choose the number of bins:
+```{r}
+p <- ggplot(data = midwest, mapping = aes(x = area))
+p + geom_histogram(bins = 10) #adjust number of bins
+```
+  
+It's also possible to compare several variables at once by using the `fill` mapping:
+```{r}
+oh_wi <- c("OH", "WI") #create character vector
+
+p <- ggplot(data = subset(midwest, subset = state %in% oh_wi), #subset midwest to include only OH, WI
+            mapping = aes(x = percollege, fill = state))
+
+p + geom_histogram(alpha = 0.4, bins = 20) #alpha sets transparency
+
+```
+  
+Instead of binning and showing a historgram, we can look at kernel density using the `density()` function:
+
+[kernel density] https://en.wikipedia.org/wiki/Kernel_density_estimation
+
+```{r}
+p <- ggplot(data = midwest, mapping = aes(x=area))
+p + geom_density()
+```
+  
+We can use `color` for the lines and `fill` for the area under the curve as well.  
+```{r}
+p <- ggplot(data = midwest, mapping = aes(x=area, fill = state, color = state))
+p + geom_density()
+```
+  
+Use `alpha` to reduce obstruction:  
+```{r}
+p <- ggplot(data = midwest, mapping = aes(x=area, fill = state, color = state))
+p + geom_density(alpha = 0.3)
+```
+
+We can use geom_line(stat = density) to remove the baselines:
+```{r}
+p <- ggplot(data = midwest, mapping = aes(x=area))
+p + geom_line(stat = "density")
+```
+  
+As with `geom_bar()`, the count-based defaults computed by the `stat_' functions of `geom_histogram()` and `geom_density()` can return proportions.
+
+For `geom_density()`, the `stat_density()` function can return either the default `..density..` statistic or `..scaled..`, which gives a proportional density estimate:
+
+```{r}
+p <- ggplot(data = subset(midwest, subset = state %in% oh_wi),
+            mapping = aes(x = area, fill = state, color = state))
+p + geom_density(alpha = 0.3, mapping = (aes(y = ..scaled..)))
+```  
+
+### 4.7 Avoid Transforms When Necessary
+  
+ggplot normally makes charts by manipulating a full data set with counts, proportions, etc...  However, at times we'll be graphing a small or summary table, and we don't need ggplot to perform any calculations.  In such cases, we can tell a `geom_` to avoid doing any calculations on the data by writing `stat = 'identity'` in the `geom_()` call:
+
+```{r}
+head(titanic) #view summary table
+
+p  <-  ggplot(data = titanic, mapping = aes(x = fate, y = percent, fill = sex))
+
+p + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  theme(legend.position = "top")
+
+```
+  
+ggplot provides a related geom, `geom_col()`, which has the same effect but assumes `stat = "identity`.
+
+The `position` argument in `geom_bar()` and `geom_col()` can also take the value of `"identity"`.  This means, just plot the values as given.  This allows us to plot things such as a flow of positive and negative values in a bar chart.  For example, the `oecd_sum` table in `socviz` contains info on life expectancy within the US, OECD, and relative.  
+```{r}
+oecd_sum
+```
+Here, we plot the "diff" over time, and use "hi_lo" to color the columns:
+
+```{r}
+p <- ggplot(data = oecd_sum, 
+            mapping = aes(x = year, y = diff, fill = hi_lo))
+
+p + geom_col() + guides(fill = FALSE) + #drop the unecessary legend
+  labs(x = NULL, y = "Difference in Years",
+       title = "US Life Expectancy Gap",
+       subtitle = "Difference between US and OECD average life expectancies, 1960 - 2015",
+       caption = "Data: OECD.  After a chart by Christopher Ingraham, 
+       Washington Post, December 27, 2017")
+
+```
+  
+### 4.8 Where to Go Next 
 
 
 
 
 
 ## Chapter 5: Graph Tables, Make Labels, Add Notes
+### 5.1 Use Pipes to Summarize Data
 
+```{r}
+
+```
+
+
+### 5.2 Continuous Variables by Group or Category
+```{r}
+
+```
+
+### 5.3 Plot Text Directly
+```{r}
+
+```
+
+### 5.4 Label Outliers
+```{r}
+
+```
+
+### 5.5 Write and Draw in the Plot Area
+```{r}
+
+```
+
+### 5.6 Understanding Scales, Guides, and Themes
+```{r}
+
+```
+
+### 5.7 Where to Go Next
 ```{r}
 
 ```
 
 ## Chapter 6: Work with Models
 
+### 6.1 Show Several Fits at Once, with a Legend
+
 ```{r}
 
 ```
+
+### 6.2 Look Inside Model Objects
+
+```{r}
+
+```
+
+### 6.3 Get Model-based Graphics Right
+
+```{r}
+
+```
+
+### 6.4 Generate Predictions to Graph
+
+```{r}
+
+```
+
+### 6.5 Tidy Model Objects with Broom
+
+```{r}
+
+```
+
+### 6.6 Grouped Analysis and List Columns
+
+```{r}
+
+```
+
+### 6.7 Plot Marginal Effects
+
+```{r}
+
+```
+
+### 6.8 Plots from Complex Surveys
+
+```{r}
+
+```
+
+### 6.9 Where to Go Next
+
 
 ## Chapter 7: Draw Maps
 
+### 7.1 Map U.S. State-Level Data
 ```{r}
 
 ```
+
+### 7.2 America's Ur-chloropeths
+
+```{r}
+
+```
+
+### 7.3 Statebins
+
+```{r}
+
+```
+
+### 7.4 Small-Multiple Maps
+
+```{r}
+
+```
+
+### 7.5 Is Your Data really Spatial?
+
+```{r}
+
+```
+
+### 7.6 Where to Go Next
 
 
 ## Chapter 8: Refine your Plots
 
+### 8.1 Use Color to Your Advantage
+
+```{r}
+
+```
+
+### 8.2 Layer Color and Text Together
+
 ```{r}
 
 ```
 
 
+### 8.3 Change the Appearance of Plots with Themes
+
+```{r}
+
+```
+
+
+### 8.4 Use Theme Elements ina Substantive Way
+
+```{r}
+
+```
+
+### 8.5 Case Studies
+
+```{r}
+
+```
+
+### 8.6 Where to Go Next
+
+```{r}
+
+```
+
+
+## Appendix  
+  
+### A Little More about R
+#### How to Read an R help Page  
+```{r}
+?mean
+```  
+The help page begins with the name of the function and the library it's in.  
+
+We need to know what a function *requires*, what it *does*, and what it *returns*.  
+  
+  * What it requires is shown in the *Usage* and *Arguments* sections of the help page.  
+  ** The *Usage* section will show default values for arguments (f there are any).  If a named argument has no defualt, you'll have to assign a value.
+
+The *Value* section shows what the function will return.  
+
+Well-documented packages will often have vignettes and demos included.  
+
+### The Basics of accessing and selecting things  
+  
+  * To access a particular element from a vector, use square brackets:  
+  
+```{r}
+my_numbers
+
+my_numbers[4]
+
+my_numbers[6]
+```
+  
+  * To access a sequence of elements, we can use a colon:  
+```{r}
+my_numbers[2:4]
+```
+  
+  * To select non-adjacent elements, , use the 'c()' function:
+```{r}
+my_numbers[c(1,3)]
+```
+  
+We can't simply write 'my_numbers[1,3]', because this is interpreted as row and column from a matrix, data frame, or tibble.  If we create a two-dimensional data set and join together in a tibble:
+```{r}
+my_tb <- tibble(mine = c(1,4,5, 8:11), yours = c(3,20,16,34:31))
+
+class(my_tb)
+
+my_tb
+```
+  
+  * Now, we can see an example of how '[3,1]' is interpreted as row 3, column 1:  
+```{r}
+my_tb[3,1] 
+
+my_tb[3,2]
+```
+  
+  * The columns in in our tibble also have names, and we can use these to reference elements:
+```{r}
+my_tb[3, "mine"]
+
+my_tb[3, "yours"]
+```
+  
+  * If we want all elements from a particular column, we can omit the column reference:
+```{r}
+my_tb[,"yours"]
+```
+  
+  * Or retrieve the entire row by omitting the column reference:  
+```{r}
+my_tb[4, ]
+```
+  
+  * A better way to access data from a particular column is via the $ operator:
+```{r}
+my_tb$mine
+```
+  
+  * We can also extract nested objects this way:
+```{r}
+?lm
+
+out <- lm(mine ~ yours, data = my_tb)
+
+out
+
+out$coefficients
+```
+### Common Problems Reading in Data
+### Managing Projects and Files
+### Some Features of This Book
