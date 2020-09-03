@@ -536,7 +536,7 @@ knitr::opts_chunk$set(fig.width = 8, fig.height = 5)
   
 To change the size of a particular figure without changing the default setting, add the option to any code chunk within the braces:  
   
-```{r example, fig.width = 4, fig.height=2.5}
+```{r example, fig.width = 4, fig.height=5}
 p + geom_point()
 ```
   
@@ -949,15 +949,107 @@ p + geom_col() + guides(fill = FALSE) + #drop the unecessary legend
   
 ### 4.8 Where to Go Next 
 
+* Try faceting the `gapminder` data in different ways.
+  + population (pop) and GDP *per capita* (gdpPercap), faceted on year
+```{r}
+head(gapminder)
+p <- ggplot(data = gapminder, mapping = aes(x = pop, y = gdpPercap))
+p + 
+  geom_point() +
+  facet_wrap(country ~ year)
+  
+```
 
+  + population & *per capita* GDP, faceted by country.  Assign this output to an object, and output to a PDF saved in the `figures` folder.
+```{r facet, fig.width = 4, fig.height=2.5}
+p_out <- p + 
+  geom_point() +
+  facet_wrap(~ country)
 
+ggsave(here("figures", "PopGDPCountry.pdf"), plot = p_out)
 
+```
+
+* Investigate the difference between a formula written as `facet_grid(sex ~ race)` and `facet_grid(~ sex + race)`.
+```{r}
+glimpse(gss_sm)
+
+p <- ggplot(data = gss_sm, mapping = aes(x = age, y = kids))
+
+p + 
+  geom_point() +
+  facet_grid(sex ~ race)
+
+p + 
+  geom_point() +
+  facet_grid(~ sex + race)
+
+```
+
+* What happens when using `facet_wrap()` in a complex formula such as `facet_wrap( ~ sex + race)` instead of facet_grid?
+```{r}
+p + 
+  geom_point() +
+  facet_wrap(~ sex + race)
+```
+
+* Try using `geom_freqpoly()` instead of some of the `geom_histograms()` used above.  These use connected lines rather than bars:
+```{r}
+p <- ggplot(data = midwest, mapping = aes(x = area))
+p + geom_freqpoly()
+```
+
+* We can bin 2 variables at a time for a histogram with `geom_bin2d()`, which takes two mappings, x and y.
+  + Try using with `gapminder` data to plot life expectancy `lifeExp` versus GDP per capita `gdpPercap`.
+```{r}
+?gapminder
+head(gapminder)
+p <- ggplot(data = gapminder, mapping = aes(x = lifeExp, y = gdpPercap))
+p +
+  geom_bin2d() +
+  scale_y_log10(labels = scales::dollar)
+```
+
+* Density estimates can also be drawn for two variables using `geom_density_2d()`, which draws contour lines estimating the joint distribution of two variables.
+  + Use to map `midwest` data, plotting `percbelowpoverty` versus `percollege` - with and without the `geom_point()` layer. 
+```{r}
+?geom_density2d
+
+p <- ggplot(data = midwest, mapping = aes(x = percbelowpoverty, y = percollege))
+
+p + geom_density2d()
+
+p + geom_density2d() +
+  geom_point()
+
+```
+  
 
 ## Chapter 5: Graph Tables, Make Labels, Add Notes
+  
+* Use `dplyr` to select, group, summarize, and transform data before graphing.
+* Expand knowledge of geoms, and learn how to choose the appropriate one.
+* Increase customization through the scale, guide and theme functions.
+
 ### 5.1 Use Pipes to Summarize Data
+Using functions to do calculations can get confusing, since the code is stuffed int eh mapping function.  A better strategy is calculating the frequency table first, then plotting the result.  This also allows us to do some sanity checks on the table, rather than simply using the graphical output to find errors.
+
+For example, if we want to determine the proportion of religions within a given region, we can use `dplyr` to operate on the `gss_sm` data frame, with it's `bigregion` and `religion` variables.  We'll use [`dplyr`] (https://dplyr.tidyverse.org/)'s special *pipe* operator, `%>%`.  (See more [here] (https://r4ds.had.co.nz/transform.html)) Data goes in one side of the pipe, actions are performed, and the result is produced.  There are four most common pipe operations:
+
+* `group_by()` Groups the data into a nesteed structure, sucha s religions by region, or authors by publications by year
+* `filter()` rows; `select()` columns *Filter* or *select* pieces of the data by row, column, or both.
+* `mutate()` Mutate the data by creating new variables at the current level of grouping.  This adds new columns to the table without aggregating.
+* `summarize()` Summarize or aggregate the grouped data.  This creates new variables at a higher level of grouping.  Four example, `mean()` or counts with `n()`.  This results in a smaller, summary table.
+ 
+Let's create a table called `rel_by_region`:
 
 ```{r}
-
+rel_by_region <-  gss_sm %>%            #creating an object
+  group_by(bigregion, religion) %>%    #group the rows by bigregion and within these, by religion, and then
+  summarize(N = n()) %>%                #summarize the table in a smaller table with columns bigregion, religion, and N
+  mutate(freq = N / sum(N),             #within this table, use N to create 2 new columns: relative frequency (freq) and    
+         pct = round((freq*100),0))     #percentage (pct) rounded to the nearest %.
+    
 ```
 
 
@@ -1076,6 +1168,8 @@ p + geom_col() + guides(fill = FALSE) + #drop the unecessary legend
 ```
 
 ### 7.6 Where to Go Next
+
+
 
 
 ## Chapter 8: Refine your Plots
