@@ -1032,11 +1032,11 @@ p + geom_density2d() +
 * Increase customization through the scale, guide and theme functions.
 
 ### 5.1 Use Pipes to Summarize Data
-Using functions to do calculations can get confusing, since the code is stuffed int eh mapping function.  A better strategy is calculating the frequency table first, then plotting the result.  This also allows us to do some sanity checks on the table, rather than simply using the graphical output to find errors.
+Using functions to do calculations can get confusing, since the code is stuffed into the mapping function.  A better strategy is calculating the frequency table first, then plotting the result.  This also allows us to do some sanity checks on the table, rather than simply using the graphical output to find errors.
 
 For example, if we want to determine the proportion of religions within a given region, we can use `dplyr` to operate on the `gss_sm` data frame, with it's `bigregion` and `religion` variables.  We'll use [`dplyr`] (https://dplyr.tidyverse.org/)'s special *pipe* operator, `%>%`.  (See more [here] (https://r4ds.had.co.nz/transform.html)) Data goes in one side of the pipe, actions are performed, and the result is produced.  There are four most common pipe operations:
 
-* `group_by()` Groups the data into a nesteed structure, sucha s religions by region, or authors by publications by year
+* `group_by()` Groups the data into a nested structure, such as religions by region, or authors by publications by year
 * `filter()` rows; `select()` columns *Filter* or *select* pieces of the data by row, column, or both.
 * `mutate()` Mutate the data by creating new variables at the current level of grouping.  This adds new columns to the table without aggregating.
 * `summarize()` Summarize or aggregate the grouped data.  This creates new variables at a higher level of grouping.  Four example, `mean()` or counts with `n()`.  This results in a smaller, summary table.
@@ -1045,40 +1045,237 @@ Let's create a table called `rel_by_region`:
 
 ```{r}
 rel_by_region <-  gss_sm %>%            #creating an object
-  group_by(bigregion, religion) %>%    #group the rows by bigregion and within these, by religion, and then
+  group_by(bigregion, religion) %>%     #group the rows by bigregion and within these, by religion, and then
   summarize(N = n()) %>%                #summarize the table in a smaller table with columns bigregion, religion, and N
   mutate(freq = N / sum(N),             #within this table, use N to create 2 new columns: relative frequency (freq) and    
          pct = round((freq*100),0))     #percentage (pct) rounded to the nearest %.
     
+rel_by_region
 ```
+  
+1. Once created, objects are carried along the pipeline
+2. The 'group_by()' function sets up how the data will be processed in the `summarize()` step; any function is applied to the innermost grouping level first.
+  + grouping levels are named from left to right in the 'group_by()', from outermost to innermost.
+    + In this case, `summarize()` is applied to religion (innermost) then region (outermost).
+3. `mutate()` functions add or remove columns from the table, but do not change grouping.
+4. Note, we can invent named variables with `summarize()` ("N") and `mutate()` ("freq", "pct").  We pick the names *AND* assign the variables.  These will be in the new summary table.
+5. When we create the new `freq` variable in `mutate()`, it allows us to use the newly created variable in the very next function.  
 
+It can be helpful to remove elements of the pipe to sanity-check our work.  For example, what do we see if we remover the `mutate()` function from the above pipe?  
 
-### 5.2 Continuous Variables by Group or Category
+We can also check whether or not each region's religions sum to 100% (or 1):
+
 ```{r}
+rel_by_region %>% group_by(bigregion) %>% 
+  summarize(total = sum(freq))
+```
+  
+Now, since we are working with percentage proportions, we can use `geom_col()` instead of `geom_bar()`  
+```{r}
+p <- ggplot(rel_by_region, aes(x = bigregion, y = pct, fill = religion)) 
+p + geom_col(position = "dodge2") +                                       #dodge2 inserts slightly more space in between bars
+  labs(x = "Region", y = "Percent", fill = "Religion") +
+  theme(legend.position = "top")
 
 ```
+Dodged charts can better be shown as faceted plots.  
+Mapping religion to the x-axis will result in a very crowded plot.  Even adjusting the labels to print at an angle makes this only slightly better. It's better to put the religions on the Y axis and percent scores on the y-axis.  In order to do this, we need to transform the *coordinate system* with `coord_flip()`:
+```{r}
+p <- ggplot(rel_by_region, aes(x = religion, y = pct, fill = religion))
+
+p + geom_col(position = "dodge2") +
+  labs(x = NULL, y = "Percent", fill = "Religion") +
+  guides(fill = FALSE) +
+  coord_flip() +
+  facet_grid( ~ bigregion)
+
+```
+
+### 5.2 Continuous Variables by Group or Category  
+Here, we move to the `organdata` table.
+
+?organdata
+str(organdata)
+glimpse(organdata)
+
+```{r}
+organdata %>% select(1:6) %>% sample_n(size = 10) 
+```
+Here's a scatterplot of donors versus year:
+
+```{r}
+p <- ggplot(data = organdata,
+            mapping = aes(x = year, y = donors))
+p + geom_point()
+```
+  
+We can facet by country and look at a line graph of donors per year, per country:
+```{r}
+p <- ggplot(data = organdata,
+            mapping = aes(x = year, y = donors))
+p + geom_line(aes(group = country)) + 
+  facet_wrap(~ country)
+```
+  
+If we instead want to focus on country-level variation - ignoring the time limit - a boxplot is useful.
+```{r}
+p <- ggplot(organdata,
+            mapping = aes(x = country, y = donors))
+p + geom_boxplot()
+```
+  
+This is a bit tough to read on the x-axis.  We're better off flipping this on its side using `coord_flip()`:
+```{r}
+p + geom_boxplot() +
+  coord_flip()
+```
+
+This is better, but we should order by donors somehow.  We can re-order based on the mean number of donors per country.
+
+`reorder()` takes 2 **required** arguments: first is the category to reorder, second is the variable to reorder by. A third, optional argument is the function used as the summary statistic.  Mean is the default here (could also use `median` or `sd`, for example). 
+*Note: `mean` calculation will fail if there are NAs in the data set; remove these with `na.rm = TRUE`.*:
+```{r}
+p <- ggplot(data = organdata,
+            mapping = aes(x = reorder(country, donors, na.rm=TRUE),    
+                          y = donors))
+p + geom_boxplot() +
+  labs(x = NULL) +
+  coord_flip()
+
+#try a violin plot instead:
+p + geom_violin() +
+  labs(x = NULL) +
+  coord_flip()
+
+#Color the boxes by another variable
+p <- ggplot(data = organdata,
+            mapping = aes(x = reorder(country, donors, na.rm=TRUE),    
+                          y = donors, fill = opt))
+
+p + geom_boxplot() +
+  labs(x = NULL) +
+  coord_flip()
+
+```
+  
+Since there are relatively few data points per country, we could also look at the individual data points.  
+```{r}
+p <- ggplot(data = organdata,
+            mapping = aes(x = reorder(country, donors, na.rm=TRUE),    
+                          y = donors, color = opt))
+
+p + geom_point() +
+  labs(x = NULL) +
+  coord_flip() +
+  theme(legend.position = "top")
+```
+However, some of the data points overlap, so we can use `geom_jitter()` instead of `geom_point()`:
+```{r}
+p + geom_jitter() +
+  labs(x = NULL) +
+  coord_flip() +
+  theme(legend.position = "top")
+```
+The jitter is a bit too much.  We can reduce both the horizontal (`width`) and vertical (`height`) jitter inside the `position_jitter()` function:
+```{r}
+p + geom_jitter(position = position_jitter(width = 0.15)) +
+  labs(x = NULL) +
+  coord_flip() +
+  theme(legend.position = "top")
+```
+  
+We can use a similar approach when there is a single data point per categorical variable.  This is known as the Cleveland Dot Plot.  Let's try this for the average donation rate per country.  First, we'll need to develop that data with a pipe:
+```{r}
+by_country <- organdata %>% group_by(consent_law, country) %>% 
+  summarize(donors_mean = mean(donors, na.rm = TRUE),
+            donors_sd = sd(donors, na.rm = TRUE),
+            gdp_mean = mean(gdp, na.rm = TRUE),
+            health_mean = mean(health, na.rm = TRUE),
+            roads_mean = mean(roads, na.rm = TRUE),
+            cerebvas_mean = mean(cerebvas, na.rm = TRUE))
+
+str(by_country)
+summary(by_country)
+head(by_country, 10)
+```
+
+Note the above pipe code requires us to type in code to calculate mean, sd, and remove NA's multiple times, plus repeatedly naming the new variables.  There's a better way to accomplish all of this.  We can apply the `mean()` and `sd()` functions to every **numerical** variable in `organdata`.  Here's the code:
+```{r}
+by_country <- organdata %>% group_by(consent_law, country) %>% 
+  summarize_if(is.numeric, funs(mean,sd), na.rm = TRUE) %>%      #tests to see whether the vector is numeric.  If so, applies mean and sd functions, and removes all NAs.
+  ungroup()
+
+str(by_country)
+summary(by_country)
+head(by_country, 10)
+```
+  
+The summary data are named by appending the function name to the original variable, such as `donors_mean` and `donors_sd'.
+
+*There are families of both `summarize_` and `mutate()` functions. (Reminder: `mutate()` functions add columns)*
+
+Now, we can draw a dot plot of mean donors per country, and color the results by the consent law `consent_law` of each country:
+```{r}
+p <- ggplot(data = by_country,
+            mapping = aes(x = donors_mean,
+                          y = reorder(country, donors_mean),
+                          color = consent_law))
+
+p + geom_point(size=4) +
+  labs(x = "Donor Procurement Rate",
+       y = "", color = "Consent Law") +
+  theme(legend.position = "top")
+
+```
+  
+We could use a facet rather than coloring by consent law.  This would allow easy comparison, but we need to solve for a couple of problems:  
+1. The default for faceting is across a row.  We want both facets to be in a single column. We can use `ncol = 1` to acheive this.
+2. Because we have a categorical value on the y-axis, the default setting for facets will have every country on *both* plots.  So, only half the rows would have points.
+  + To avoid this, allow the scales to be free via the `scales = free_y` argument.
+```{r}
+p <-  ggplot(data = by_country,
+             mapping = aes(x = donors_mean,
+                           y = reorder(country, donors_mean)))
+
+p + geom_point(size = 4) + 
+  facet_wrap(~ consent_law, scales = "free_y", ncol = 1) +
+  labs(x = "Donor Procurement Rate",
+       y = "")
+
+```
+  
 
 ### 5.3 Plot Text Directly
+
+
 ```{r}
 
 ```
 
 ### 5.4 Label Outliers
+
+
 ```{r}
 
 ```
 
 ### 5.5 Write and Draw in the Plot Area
+
+
 ```{r}
 
 ```
 
 ### 5.6 Understanding Scales, Guides, and Themes
+
+
 ```{r}
 
 ```
 
 ### 5.7 Where to Go Next
+
+
 ```{r}
 
 ```
