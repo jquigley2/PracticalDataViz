@@ -1244,26 +1244,112 @@ p + geom_point(size = 4) +
 
 ```
   
+We can also show information about variance on the plot by using `geom_pointrange()`, which gives us a point estimate and the range around it.  We map our `x` and `y` variables as usual, but must add `ymax` and `ymin` to set the range.  These are given by the mean (`donors_mean) +/- the standard deviation (`donors_sd`) in this instance):
+```{r}
+p <- ggplot(data = by_country, 
+            mapping = aes(x = reorder(country, donors_mean), y = donors_mean))
+
+p + geom_pointrange(mapping = aes(ymin = donors_mean - donors_sd, ymax = donors_mean + donors_sd)) +
+  labs(x = "", y = "Donor Procurement Rate") + 
+  coord_flip()
+```
+
 
 ### 5.3 Plot Text Directly
-
-
+  
+We can use `geom_text()` to plot all labels along with points, or just select points.   
 ```{r}
+p <- ggplot(data = by_country,
+            mapping = aes(x = roads_mean, y = donors_mean))
+
+p + geom_point() + 
+  geom_text(mapping = aes(label = country))
+```
+  
+Unfortunately, this plots right on top of the points, obscuring them.  It's better to use functions from the `ggrepel` library instead.  This library adds some useful new geoms to `ggplot`.  
+  
+```{r}
+elections_historic %>% select(2:7)
+
+p_title <- "Presidential Elections: Popular and Electoral College Margins"
+p_subtitle <- "1824-2016"
+p_caption <- "Data for 2016 are provisional."
+x_label <- "Winner's share of Popular Vote"
+y_label <- "Winner's share of Electoral College Votes"
+
+p <- ggplot(elections_historic, aes(x = popular_pct,
+                                    y = ec_pct,
+                                    label = winner_label))
+
+p + geom_hline(yintercept = 0.5, size = 1.4, color = "gray80") +
+  geom_vline(xintercept = 0.5, size = 1.4, color = "gray80") +
+  geom_point() + 
+  geom_text_repel() +
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = x_label,
+       y = y_label,
+       title = p_title,
+       subtitle = p_subtitle,
+       caption = p_caption
+         )
 
 ```
-
-### 5.4 Label Outliers
-
+  
+There is also a `geom_abline()` that draws straight lines based on a supplied slope and intercept. This is useful for plotting, for example, 45 degree reference lines in scatterplots.  
+  
+### 5.4 Label Outliers  
+We can also pick out specific points to repel, by choosing a different set than `geom_point()` uses.  For example:
 
 ```{r}
+p <- ggplot(data = by_country,
+            mapping = aes(x = gdp_mean, y = health_mean))
+
+p + geom_point() +
+  geom_text_repel(data = subset(by_country, gdp_mean > 25000),
+                  mapping = aes(label = country))
+
+p + geom_point() +
+  geom_text_repel(data = subset(by_country, 
+                                gdp_mean > 25000 | health_mean < 1500 | country %in% "Belgium"),
+                  mapping = aes(label = country))
+```
+  
+We can also pick out specific points by creating a dummy variable in the data set for this purpose:
+```{r}
+
+organdata$ind <-                              #creates a dummy variable which will be true or false
+  organdata$ccode %in% c("Ita", "Spa") &      #country code must be Ita or Spa AND
+  organdata$year > 1998                       #year > 1998
+
+p <- ggplot(data = organdata,
+            mapping = aes(x = roads,
+                          y = donors,
+                          color = ind))     #map dummy to color
+
+p + geom_point() +
+    geom_text_repel(data = subset(organdata, ind),
+                    mapping = aes(label = ccode)) +
+    guides(label = FALSE, color = FALSE)
 
 ```
-
+  
 ### 5.5 Write and Draw in the Plot Area
+  
+We use `annotate()` to highlight something not mapped to a variable.  We can use this for placing text on the plot, or highlighting an area.
 
 
 ```{r}
+p <- ggplot(data = organdata, mapping = aes(x = roads, y = donors))
+p + geom_point() + annotate(geom = "text", x = 91, y = 33,
+                            label = "A surprisingly high \n recovery rate.",
+                            hjust = 0)
 
+p + geom_point() +
+    annotate(geom = "rect", xmin = 125, xmax = 155,
+             ymin = 30, ymax = 35, fill = "red", alpha = 0.2) + 
+    annotate(geom = "text", x = 157, y = 33,
+             label = "A surprisingly high \n recovery rate.", hjust = 0)
 ```
 
 ### 5.6 Understanding Scales, Guides, and Themes
